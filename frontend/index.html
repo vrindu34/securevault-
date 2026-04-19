@@ -784,30 +784,56 @@ async function doSend() {
   const prog = document.getElementById('send-progress');
   const pbar = document.getElementById('send-pbar');
   const stxt = document.getElementById('send-status-text');
+  const steps = document.querySelectorAll('.crypto-step');
 
   btn.disabled = true; prog.style.display = '';
-  stxt.textContent = 'Uploading & encrypting…'; pbar.style.width = '30%';
+
+  const msgs = [
+    [10,  'Computing SHA-256 hash…'],
+    [30,  'Signing with RSA-PSS private key…'],
+    [55,  'Encrypting with AES-256-CBC…'],
+    [75,  'Wrapping session key with RSA-OAEP…'],
+    [90,  'Delivering to inbox…'],
+  ];
+
+  steps.forEach(s => s.style.opacity = '0.3');
+
+  let i = 0;
+  const ticker = setInterval(() => {
+    if (i < msgs.length) {
+      const [pct, msg] = msgs[i];
+      pbar.style.width = pct + '%';
+      stxt.textContent = msg;
+      steps[i].style.opacity = '1';
+      steps[i].style.borderLeft = '3px solid var(--accent)';
+      steps[i].style.paddingLeft = '10px';
+      i++;
+    }
+  }, 600);
 
   const fd = new FormData();
   fd.append('file', selectedFile);
   fd.append('recipient', recipient);
 
-  stxt.textContent = 'Signing with RSA-PSS…'; pbar.style.width = '60%';
-
   const res = await apiFetch('/api/send', { method: 'POST', body: fd });
+  clearInterval(ticker);
   pbar.style.width = '100%';
   btn.disabled = false;
 
   if (res) {
-    stxt.textContent = '✓ Delivered!';
+    stxt.textContent = '✓ Encrypted & Delivered!';
+    steps.forEach(s => { s.style.opacity = '1'; s.style.borderLeft = '3px solid var(--green)'; });
     toast('success', 'Sent!', `"${selectedFile.name}" encrypted & delivered to ${recipient}`);
-    setTimeout(() => { prog.style.display = 'none'; pbar.style.width = '0%'; }, 2000);
+    setTimeout(() => {
+      prog.style.display = 'none'; pbar.style.width = '0%';
+      steps.forEach(s => { s.style.opacity = '1'; s.style.borderLeft = ''; s.style.paddingLeft = ''; });
+    }, 3000);
     clearFile();
   } else {
     prog.style.display = 'none';
+    steps.forEach(s => { s.style.opacity = '1'; s.style.borderLeft = ''; s.style.paddingLeft = ''; });
   }
 }
-
 // ── Inbox ─────────────────────────────────────────────────────────────────
 async function loadInbox() {
   if (!sessionToken) return;
@@ -841,25 +867,46 @@ async function loadInbox() {
 }
 
 async function doDecrypt(vaultId, sender, filename) {
-  toast('info', 'Decrypting…', `Verifying signature & decrypting "${filename}"`);
+  const btn = document.querySelector(`button[onclick="doDecrypt('${vaultId}','${sender}','${filename}')"]`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Decrypting…'; }
+
+  const steps = [
+    '🔍 Verifying RSA-PSS signature…',
+    '🔑 Unwrapping session key with your private key…',
+    '🔓 Decrypting with AES-256-CBC…',
+    '✅ Integrity verified!'
+  ];
+
+  let s = 0;
+  const ticker = setInterval(() => {
+    if (s < steps.length && btn) {
+      btn.textContent = steps[s++];
+    }
+  }, 700);
+
   const fd = new FormData();
   fd.append('vault_id', vaultId);
   fd.append('sender', sender);
   const res = await apiFetch('/api/decrypt', { method: 'POST', body: fd });
-  if (!res) return;
-  toast('success', '✓ Decrypted!', `"${filename}" verified. Downloading…`);
-  const a = document.createElement('a');
-  a.href = `/api/download/${res.filename}`;
-  // Pass token as query param for the download
-  a.href = `/api/download/${encodeURIComponent(res.filename)}`;
-  // Use fetch for authenticated download
-  const blob = await fetch(a.href, {
+  clearInterval(ticker);
+
+  if (!res) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔓 Decrypt'; }
+    return;
+  }
+
+  toast('success', '✓ Decrypted!', `"${filename}" verified & decrypted. Downloading…`);
+  if (btn) btn.textContent = '⬇ Downloading…';
+
+  const blob = await fetch(`/api/download/${encodeURIComponent(res.filename)}`, {
     headers: { Authorization: `Bearer ${sessionToken}` }
   }).then(r => r.blob());
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url; link.download = res.filename; link.click();
   URL.revokeObjectURL(url);
+
+  if (btn) { btn.disabled = false; btn.textContent = '✓ Done'; }
 }
 
 // ── Users ─────────────────────────────────────────────────────────────────
