@@ -210,7 +210,7 @@ select option { background: var(--bg); }
 .progress-bar {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--green));
-  border-radius: 4px; transition: width 0.3s; width: 0%;
+  border-radius: 4px; transition: width 0.4s ease; width: 0%;
 }
 
 /* ── Toast ── */
@@ -254,7 +254,11 @@ select option { background: var(--bg); }
 .inbox-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
 /* ── Crypto steps ── */
-.crypto-step { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.crypto-step {
+  display: flex; gap: 16px; padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  transition: opacity 0.3s, border-left 0.3s, padding-left 0.3s;
+}
 .crypto-step:last-child { border-bottom: none; }
 .step-num {
   width: 28px; height: 28px;
@@ -273,6 +277,51 @@ select option { background: var(--bg); }
 /* ── Grid ── */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* ── Vault Inspect Modal ── */
+#vault-modal {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+  display: none;
+}
+#vault-modal.open { display: flex; }
+.vault-modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px;
+  max-width: 580px; width: 90%;
+  position: relative;
+  animation: fadeIn 0.2s ease;
+  max-height: 90vh; overflow-y: auto;
+}
+.vm-header { margin-bottom: 24px; }
+.vm-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+.vm-filename { font-size: 12px; color: var(--muted); }
+.vm-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--muted);
+  font-size: 20px; cursor: pointer; line-height: 1;
+  transition: color 0.2s;
+}
+.vm-close:hover { color: var(--red); }
+.vm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.vm-stat {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px;
+}
+.vm-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.vm-stat-value { font-size: 18px; font-weight: 700; }
+.vm-hex-block { margin-bottom: 14px; }
+.vm-hex-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.vm-hex {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  word-break: break-all; line-height: 1.8;
+}
+.vm-actions { display: flex; gap: 10px; margin-top: 24px; }
 
 /* ── Login overlay ── */
 #login-overlay {
@@ -317,6 +366,60 @@ select option { background: var(--bg); }
 </style>
 </head>
 <body>
+
+<!-- ── Vault Inspect Modal ── -->
+<div id="vault-modal">
+  <div class="vault-modal-box">
+    <button class="vm-close" onclick="closeVaultModal()">✕</button>
+    <div class="vm-header">
+      <div class="vm-title">🔒 Encrypted Vault File</div>
+      <div class="vm-filename" id="vm-filename">—</div>
+    </div>
+
+    <div class="vm-grid">
+      <div class="vm-stat">
+        <div class="vm-stat-label">Total File Size</div>
+        <div class="vm-stat-value" id="vm-size" style="color:var(--text)">…</div>
+      </div>
+      <div class="vm-stat">
+        <div class="vm-stat-label">Ciphertext Size</div>
+        <div class="vm-stat-value" id="vm-cipher-size" style="color:var(--red)">…</div>
+      </div>
+      <div class="vm-stat">
+        <div class="vm-stat-label">Wrapped AES Key</div>
+        <div class="vm-stat-value" id="vm-key-size" style="color:var(--accent2)">…</div>
+      </div>
+      <div class="vm-stat">
+        <div class="vm-stat-label">RSA-PSS Signature</div>
+        <div class="vm-stat-value" id="vm-sig-size" style="color:var(--green)">…</div>
+      </div>
+    </div>
+
+    <div class="vm-hex-block">
+      <div class="vm-hex-label">AES-CBC Initialisation Vector (16 bytes)</div>
+      <div class="vm-hex" id="vm-iv" style="color:var(--amber)">…</div>
+    </div>
+
+    <div class="vm-hex-block">
+      <div class="vm-hex-label">Ciphertext Preview — first 64 bytes (unreadable without key)</div>
+      <div class="vm-hex" id="vm-cipher-preview" style="color:var(--red)">…</div>
+    </div>
+
+    <div class="vm-hex-block">
+      <div class="vm-hex-label">RSA-OAEP Wrapped Key Preview — first 32 bytes</div>
+      <div class="vm-hex" id="vm-key-preview" style="color:var(--accent2)">…</div>
+    </div>
+
+    <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:8px;padding:12px;font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:0;">
+      ℹ️ This is the raw encrypted content. Without your RSA private key, this data is completely unreadable. Click <strong style="color:var(--green)">Decrypt Now</strong> to unlock it.
+    </div>
+
+    <div class="vm-actions">
+      <button onclick="closeVaultModal()" class="btn btn-secondary" style="flex:1">Close</button>
+      <button id="vm-decrypt-btn" class="btn btn-success" style="flex:1">🔓 Decrypt Now</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Login Overlay ── -->
 <div id="login-overlay">
@@ -469,11 +572,13 @@ select option { background: var(--bg); }
         <div>
           <div class="card">
             <div class="card-title">⚡ Encryption Pipeline</div>
-            <div class="crypto-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">SHA-256 Hash</div><div class="step-desc">File fingerprint for integrity verification</div></div></div>
-            <div class="crypto-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">RSA-PSS Signature</div><div class="step-desc">Signed with your RSA-2048 private key</div></div></div>
-            <div class="crypto-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">AES-256-CBC Encryption</div><div class="step-desc">Fresh 256-bit session key + random IV per file</div></div></div>
-            <div class="crypto-step"><div class="step-num">4</div><div class="step-content"><div class="step-title">RSA-OAEP Key Wrap</div><div class="step-desc">Session key encrypted with recipient's public key</div></div></div>
-            <div class="crypto-step"><div class="step-num">5</div><div class="step-content"><div class="step-title">.vault Delivery</div><div class="step-desc">Delivered to recipient's inbox</div></div></div>
+            <div id="crypto-steps">
+              <div class="crypto-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">SHA-256 Hash</div><div class="step-desc">File fingerprint for integrity verification</div></div></div>
+              <div class="crypto-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">RSA-PSS Signature</div><div class="step-desc">Signed with your RSA-2048 private key</div></div></div>
+              <div class="crypto-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">AES-256-CBC Encryption</div><div class="step-desc">Fresh 256-bit session key + random IV per file</div></div></div>
+              <div class="crypto-step"><div class="step-num">4</div><div class="step-content"><div class="step-title">RSA-OAEP Key Wrap</div><div class="step-desc">Session key encrypted with recipient's public key</div></div></div>
+              <div class="crypto-step"><div class="step-num">5</div><div class="step-content"><div class="step-title">.vault Delivery</div><div class="step-desc">Delivered to recipient's inbox</div></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -484,7 +589,7 @@ select option { background: var(--bg); }
       <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between">
         <div>
           <div class="panel-title">Inbox</div>
-          <div class="panel-subtitle">Only you can decrypt these — your private key is required</div>
+          <div class="panel-subtitle">Inspect the encrypted vault or decrypt directly — your private key is required</div>
         </div>
         <button class="btn btn-secondary" onclick="loadInbox()">↻ Refresh</button>
       </div>
@@ -578,15 +683,10 @@ let ws           = null;
       if (token && username) {
         sessionToken = token;
         currentUser  = username;
-        // Verify it's still valid server-side
         fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
           .then(r => r.ok ? r.json() : Promise.reject())
-          .then(d => {
-            setUser(d.username, token);
-          })
-          .catch(() => {
-            clearSession();
-          });
+          .then(d => { setUser(d.username, token); })
+          .catch(() => { clearSession(); });
       }
     } catch {}
   }
@@ -703,7 +803,7 @@ async function doLogout() {
   toast('info', 'Signed out', 'Your session has ended');
 }
 
-// ── WebSocket (token in path) ─────────────────────────────────────────────
+// ── WebSocket ─────────────────────────────────────────────────────────────
 function connectWS() {
   if (!sessionToken) return;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -774,29 +874,35 @@ dz.addEventListener('click', e => {
   document.getElementById('file-input').click();
 });
 
-// ── Send ──────────────────────────────────────────────────────────────────
+// ── Send (with animated crypto steps) ────────────────────────────────────
 async function doSend() {
   if (!selectedFile)  return toast('error', 'No file', 'Select a file to send');
   const recipient = document.getElementById('send-recipient').value;
   if (!recipient) return toast('error', 'No recipient', 'Select who to send to');
 
-  const btn  = document.getElementById('send-btn');
-  const prog = document.getElementById('send-progress');
-  const pbar = document.getElementById('send-pbar');
-  const stxt = document.getElementById('send-status-text');
-  const steps = document.querySelectorAll('.crypto-step');
+  const btn   = document.getElementById('send-btn');
+  const prog  = document.getElementById('send-progress');
+  const pbar  = document.getElementById('send-pbar');
+  const stxt  = document.getElementById('send-status-text');
+  const steps = document.querySelectorAll('#crypto-steps .crypto-step');
 
-  btn.disabled = true; prog.style.display = '';
+  btn.disabled = true;
+  prog.style.display = '';
+
+  // Dim all steps first
+  steps.forEach(s => {
+    s.style.opacity = '0.3';
+    s.style.borderLeft = '';
+    s.style.paddingLeft = '';
+  });
 
   const msgs = [
-    [10,  'Computing SHA-256 hash…'],
-    [30,  'Signing with RSA-PSS private key…'],
-    [55,  'Encrypting with AES-256-CBC…'],
-    [75,  'Wrapping session key with RSA-OAEP…'],
-    [90,  'Delivering to inbox…'],
+    [15,  'Computing SHA-256 hash…'],
+    [35,  'Signing with RSA-PSS private key…'],
+    [58,  'Encrypting with AES-256-CBC…'],
+    [78,  'Wrapping session key with RSA-OAEP…'],
+    [92,  'Delivering .vault to inbox…'],
   ];
-
-  steps.forEach(s => s.style.opacity = '0.3');
 
   let i = 0;
   const ticker = setInterval(() => {
@@ -804,7 +910,7 @@ async function doSend() {
       const [pct, msg] = msgs[i];
       pbar.style.width = pct + '%';
       stxt.textContent = msg;
-      steps[i].style.opacity = '1';
+      steps[i].style.opacity    = '1';
       steps[i].style.borderLeft = '3px solid var(--accent)';
       steps[i].style.paddingLeft = '10px';
       i++;
@@ -817,15 +923,20 @@ async function doSend() {
 
   const res = await apiFetch('/api/send', { method: 'POST', body: fd });
   clearInterval(ticker);
-  pbar.style.width = '100%';
   btn.disabled = false;
 
   if (res) {
+    pbar.style.width = '100%';
     stxt.textContent = '✓ Encrypted & Delivered!';
-    steps.forEach(s => { s.style.opacity = '1'; s.style.borderLeft = '3px solid var(--green)'; });
+    steps.forEach(s => {
+      s.style.opacity    = '1';
+      s.style.borderLeft = '3px solid var(--green)';
+      s.style.paddingLeft = '10px';
+    });
     toast('success', 'Sent!', `"${selectedFile.name}" encrypted & delivered to ${recipient}`);
     setTimeout(() => {
-      prog.style.display = 'none'; pbar.style.width = '0%';
+      prog.style.display = 'none';
+      pbar.style.width   = '0%';
       steps.forEach(s => { s.style.opacity = '1'; s.style.borderLeft = ''; s.style.paddingLeft = ''; });
     }, 3000);
     clearFile();
@@ -834,6 +945,7 @@ async function doSend() {
     steps.forEach(s => { s.style.opacity = '1'; s.style.borderLeft = ''; s.style.paddingLeft = ''; });
   }
 }
+
 // ── Inbox ─────────────────────────────────────────────────────────────────
 async function loadInbox() {
   if (!sessionToken) return;
@@ -858,7 +970,12 @@ async function loadInbox() {
         <div class="inbox-meta">From <strong style="color:var(--accent)">${f.sender}</strong> &nbsp;·&nbsp; ${formatTs(f.timestamp)} &nbsp;·&nbsp; ${formatBytes(f.size)}</div>
       </div>
       <div class="inbox-actions">
+        <button class="btn btn-secondary" style="padding:8px 14px"
+          onclick="showVaultModal('${f.vault_id}','${f.sender}','${f.filename}')">
+          🔍 Inspect
+        </button>
         <button class="btn btn-success" style="padding:8px 14px"
+          id="decrypt-btn-${CSS.escape(f.vault_id)}"
           onclick="doDecrypt('${f.vault_id}','${f.sender}','${f.filename}')">
           🔓 Decrypt
         </button>
@@ -866,21 +983,61 @@ async function loadInbox() {
     </div>`).join('');
 }
 
-async function doDecrypt(vaultId, sender, filename) {
-  const btn = document.querySelector(`button[onclick="doDecrypt('${vaultId}','${sender}','${filename}')"]`);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Decrypting…'; }
+// ── Vault Inspect Modal ───────────────────────────────────────────────────
+async function showVaultModal(vaultId, sender, filename) {
+  document.getElementById('vm-filename').textContent = `${filename}  ·  from ${sender}`;
+  document.getElementById('vm-size').textContent         = '…';
+  document.getElementById('vm-cipher-size').textContent  = '…';
+  document.getElementById('vm-key-size').textContent     = '…';
+  document.getElementById('vm-sig-size').textContent     = '…';
+  document.getElementById('vm-iv').textContent           = '…';
+  document.getElementById('vm-cipher-preview').textContent = '…';
+  document.getElementById('vm-key-preview').textContent  = '…';
 
-  const steps = [
-    '🔍 Verifying RSA-PSS signature…',
-    '🔑 Unwrapping session key with your private key…',
-    '🔓 Decrypting with AES-256-CBC…',
-    '✅ Integrity verified!'
+  document.getElementById('vault-modal').classList.add('open');
+
+  const res = await apiFetch(`/api/vault-info/${encodeURIComponent(vaultId)}`);
+  if (!res) { closeVaultModal(); return; }
+
+  document.getElementById('vm-size').textContent         = formatBytes(res.file_size);
+  document.getElementById('vm-cipher-size').textContent  = formatBytes(res.ciphertext_size);
+  document.getElementById('vm-key-size').textContent     = res.wrapped_key_size + ' bytes';
+  document.getElementById('vm-sig-size').textContent     = res.signature_size + ' bytes';
+  document.getElementById('vm-iv').textContent           = res.iv_hex;
+  document.getElementById('vm-cipher-preview').textContent = res.ciphertext_preview;
+  document.getElementById('vm-key-preview').textContent  = res.wrapped_key_preview;
+
+  document.getElementById('vm-decrypt-btn').onclick = () => {
+    closeVaultModal();
+    doDecrypt(vaultId, sender, filename);
+  };
+}
+
+function closeVaultModal() {
+  document.getElementById('vault-modal').classList.remove('open');
+}
+
+// Close modal on backdrop click
+document.getElementById('vault-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeVaultModal();
+});
+
+// ── Decrypt (with animated steps in button) ───────────────────────────────
+async function doDecrypt(vaultId, sender, filename) {
+  const btn = document.getElementById(`decrypt-btn-${CSS.escape(vaultId)}`);
+
+  const decryptSteps = [
+    '🔍 Reading vault file…',
+    '🔑 Unwrapping AES key…',
+    '🔓 Decrypting AES-256-CBC…',
+    '✅ Verifying signature…',
   ];
 
+  if (btn) { btn.disabled = true; }
   let s = 0;
   const ticker = setInterval(() => {
-    if (s < steps.length && btn) {
-      btn.textContent = steps[s++];
+    if (btn && s < decryptSteps.length) {
+      btn.textContent = decryptSteps[s++];
     }
   }, 700);
 
@@ -895,13 +1052,14 @@ async function doDecrypt(vaultId, sender, filename) {
     return;
   }
 
-  toast('success', '✓ Decrypted!', `"${filename}" verified & decrypted. Downloading…`);
   if (btn) btn.textContent = '⬇ Downloading…';
+  toast('success', '✓ Decrypted!', `"${filename}" verified & decrypted. Downloading…`);
 
   const blob = await fetch(`/api/download/${encodeURIComponent(res.filename)}`, {
     headers: { Authorization: `Bearer ${sessionToken}` }
   }).then(r => r.blob());
-  const url = URL.createObjectURL(blob);
+
+  const url  = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url; link.download = res.filename; link.click();
   URL.revokeObjectURL(url);
@@ -913,7 +1071,7 @@ async function doDecrypt(vaultId, sender, filename) {
 async function loadUsers() {
   const res = await apiFetch('/api/users');
   if (!res) return;
-  const list = document.getElementById('users-list');
+  const list  = document.getElementById('users-list');
   const users = res.users || [];
   if (!users.length) {
     list.innerHTML = `<div class="empty-state"><span class="icon">👤</span><p>No users</p></div>`;
@@ -939,7 +1097,7 @@ async function loadSendRecipients() {
       .map(u => `<option value="${u}">${u}</option>`).join('');
 }
 
-// ── API helper (attaches Bearer token automatically) ──────────────────────
+// ── API helper ────────────────────────────────────────────────────────────
 async function apiFetch(url, opts = {}, requireAuth = true) {
   const headers = { ...(opts.headers || {}) };
   if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
