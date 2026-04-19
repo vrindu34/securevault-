@@ -298,7 +298,24 @@ async def send_file(
         "filename":  file.filename,
     }
 
-
+@app.get("/api/vault-info/{vault_id:path}")
+def get_vault_info(vault_id: str, username: str = Depends(require_auth)):
+    import hashlib
+    vault_path = INBOX_DIR / username / vault_id
+    if not vault_path.exists():
+        raise HTTPException(404, "Vault file not found")
+    from vault_io import FileIO
+    bundle = FileIO.read_vault(vault_path)
+    return {
+        "vault_id":         vault_id,
+        "file_size":        vault_path.stat().st_size,
+        "ciphertext_size":  len(bundle.ciphertext),
+        "wrapped_key_size": len(bundle.wrapped_key),
+        "signature_size":   len(bundle.signature),
+        "iv_hex":           bundle.iv.hex(),
+        "ciphertext_preview": bundle.ciphertext[:64].hex(),
+        "wrapped_key_preview": bundle.wrapped_key[:32].hex(),
+    }
 @app.get("/api/inbox")
 def get_inbox(username: str = Depends(require_auth)):
     inbox = INBOX_DIR / username
