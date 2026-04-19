@@ -472,11 +472,11 @@ select option { background: var(--bg); }
                onkeydown="if(event.key==='Enter') doRegister()">
       </div>
       <div class="pw-hint">
-        🔑 Registering generates an <strong>RSA-2048 key pair</strong> for you.<br>
+         Registering generates an <strong>RSA-2048 key pair</strong> for you.<br>
         Your password protects this account — choose a strong one.
       </div>
       <button class="btn btn-success btn-full" style="margin-top:14px" onclick="doRegister()" id="reg-btn" disabled>
-        🔑 Create Account & Generate Keys
+         Create Account & Generate Keys
       </button>
     </div>
   </div>
@@ -504,7 +504,7 @@ select option { background: var(--bg); }
     <div class="nav-section">
       <div class="nav-label">Transfer</div>
       <div class="nav-item active" onclick="showPanel('send')">
-        <span class="icon">📤</span> Send File
+        <span class="icon"></span> Send File
       </div>
       <div class="nav-item" onclick="showPanel('inbox')">
         <span class="icon">📥</span> Inbox
@@ -517,7 +517,7 @@ select option { background: var(--bg); }
         <span class="icon">👥</span> Users
       </div>
       <div class="nav-item" onclick="showPanel('security')">
-        <span class="icon">🛡️</span> Security Info
+        <span class="icon"></span> Security Info
       </div>
     </div>
     <div class="sidebar-bottom">
@@ -553,7 +553,7 @@ select option { background: var(--bg); }
             <div id="file-preview" style="display:none"></div>
           </div>
           <div class="card">
-            <div class="card-title">🎯 Recipient</div>
+            <div class="card-title">🙍‍♂️ Recipient</div>
             <div class="form-row">
               <label>Send To</label>
               <select id="send-recipient">
@@ -565,13 +565,13 @@ select option { background: var(--bg); }
               <div style="font-size:11px;color:var(--muted);margin-top:6px" id="send-status-text">Encrypting…</div>
             </div>
             <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="doSend()" id="send-btn">
-              🔒 Encrypt & Send
+               Encrypt & Send
             </button>
           </div>
         </div>
         <div>
           <div class="card">
-            <div class="card-title">⚡ Encryption Pipeline</div>
+            <div class="card-title"> Encryption Pipeline</div>
             <div id="crypto-steps">
               <div class="crypto-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">SHA-256 Hash</div><div class="step-desc">File fingerprint for integrity verification</div></div></div>
               <div class="crypto-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">RSA-PSS Signature</div><div class="step-desc">Signed with your RSA-2048 private key</div></div></div>
@@ -605,7 +605,7 @@ select option { background: var(--bg); }
         <div class="panel-subtitle">All users with public keys in the PKI</div>
       </div>
       <div class="card">
-        <div class="card-title">👥 PKI Directory</div>
+        <div class="card-title"> PKI Directory</div>
         <div id="users-list"><div class="empty-state"><p>Loading…</p></div></div>
       </div>
     </div>
@@ -618,7 +618,7 @@ select option { background: var(--bg); }
       </div>
       <div class="grid-2">
         <div class="card">
-          <div class="card-title">🔑 Authentication</div>
+          <div class="card-title"> Authentication</div>
           <div style="display:flex;flex-direction:column;gap:12px">
             <div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
               <span style="font-size:13px;color:var(--muted)">Password Hashing</span>
@@ -639,7 +639,7 @@ select option { background: var(--bg); }
           </div>
         </div>
         <div class="card">
-          <div class="card-title">🛡️ File Security</div>
+          <div class="card-title"> File Security</div>
           <div style="display:flex;flex-direction:column;gap:12px">
             <div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
               <span style="font-size:13px;color:var(--muted)">Confidentiality</span>
@@ -733,7 +733,7 @@ async function doRegister() {
   const fd = new FormData();
   fd.append('username', u); fd.append('password', p);
   const res = await apiFetch('/api/auth/register', { method: 'POST', body: fd }, false);
-  btn.disabled = false; btn.textContent = '🔑 Create Account & Generate Keys';
+  btn.disabled = false; btn.textContent = ' Create Account & Generate Keys';
   if (res) {
     toast('success', 'Account Created!', `Welcome ${res.username} — RSA keys generated`);
     saveSession(res.username, res.token);
@@ -977,7 +977,7 @@ async function loadInbox() {
         <button class="btn btn-success" style="padding:8px 14px"
           id="decrypt-btn-${CSS.escape(f.vault_id)}"
           onclick="doDecrypt('${f.vault_id}','${f.sender}','${f.filename}')">
-          🔓 Decrypt
+           Decrypt
         </button>
       </div>
     </div>`).join('');
@@ -1030,7 +1030,7 @@ async function doDecrypt(vaultId, sender, filename) {
     '🔍 Reading vault file…',
     '🔑 Unwrapping AES key…',
     '🔓 Decrypting AES-256-CBC…',
-    '✅ Verifying signature…',
+    '✔️ Verifying signature…',
   ];
 
   if (btn) { btn.disabled = true; }
