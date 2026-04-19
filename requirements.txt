@@ -1,0 +1,6 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+pycryptodome>=3.20.0
+aiofiles>=23.2.1
+bcrypt>=4.1.0
