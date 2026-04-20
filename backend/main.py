@@ -1,7 +1,4 @@
-"""
-main.py — SecureVault Web API v3.1
-Added: password authentication (bcrypt), session tokens, protected endpoints.
-"""
+
 
 import os
 import sys
