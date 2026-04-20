@@ -1,12 +1,4 @@
-"""
-key_manager.py
-==============
-Handles RSA key-pair lifecycle:
-  • Generating and storing key pairs
-  • Persisting public keys in a local SQLite PKI database
-  • Saving / loading private keys from protected local files
-  • Resolving a username → public key for encryption
-"""
+
 
 import os
 import stat
@@ -26,18 +18,7 @@ PRIVKEY_DIR  = Path("vault/private_keys")    # Directory for private key files
 # DatabaseManager  –  thin wrapper around SQLite
 # ---------------------------------------------------------------------------
 class DatabaseManager:
-    """
-    Manages the local Public Key Infrastructure (PKI) database.
-
-    Schema
-    ------
-    users(id INTEGER PK, username TEXT UNIQUE, public_key_pem TEXT, created_at TIMESTAMP)
-
-    This is intentionally minimal.  In a real system you would add:
-      • Certificate expiry / revocation
-      • Key fingerprints for out-of-band verification
-      • Audit log of key registrations
-    """
+   
 
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
@@ -50,7 +31,7 @@ class DatabaseManager:
         return conn
 
     def _init_schema(self):
-        """Create tables if they don't already exist (idempotent)."""
+        
         with self._get_connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -67,10 +48,7 @@ class DatabaseManager:
     # ------------------------------------------------------------------ #
 
     def store_public_key(self, username: str, public_key_pem: bytes) -> None:
-        """
-        Insert or replace a user's public key.
-        Using INSERT OR REPLACE allows key rotation without changing the API.
-        """
+      
         with self._get_connection() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO users (username, public_key_pem) VALUES (?, ?)",
@@ -101,25 +79,7 @@ class DatabaseManager:
 # KeyManager  –  key lifecycle orchestrator
 # ---------------------------------------------------------------------------
 class KeyManager:
-    """
-    High-level interface for RSA key management.
-
-    Responsibilities
-    ----------------
-    1. generate_and_register() : create a new key pair, persist both halves.
-    2. load_private_key()      : read a protected private key from disk.
-    3. get_public_key()        : look up a recipient's public key from the DB.
-
-    Private Key Protection
-    ----------------------
-    Private keys are stored as plain PEM files in PRIVKEY_DIR.
-    After writing, the file permissions are set to 0o600 (owner read/write only)
-    so no other OS user can read the key without explicit permission escalation.
-
-    For a production system you would additionally:
-      • Encrypt the PEM with a user-supplied passphrase (AES-256-GCM + scrypt KDF)
-      • Consider hardware key storage (TPM, HSM, or OS keychain)
-    """
+   
 
     def __init__(self):
         self.db      = DatabaseManager()
@@ -131,22 +91,7 @@ class KeyManager:
     # ------------------------------------------------------------------ #
 
     def generate_and_register(self, username: str) -> Path:
-        """
-        Generate a fresh RSA-2048 key pair for `username`.
-
-        Steps
-        -----
-        1. Call CryptoEngine to generate (private_pem, public_pem).
-        2. Store public_pem in the SQLite PKI database.
-        3. Write private_pem to <PRIVKEY_DIR>/<username>_private.pem
-           with permissions 0o600.
-
-        Returns the Path of the saved private key file.
-
-        Raises FileExistsError if a private key already exists for this user
-        (prevents accidental overwrite — the caller should explicitly delete
-        the old key first if rotation is intended).
-        """
+        
         priv_path = self._private_key_path(username)
         if priv_path.exists():
             raise FileExistsError(
@@ -173,11 +118,7 @@ class KeyManager:
     # ------------------------------------------------------------------ #
 
     def load_private_key(self, username: str) -> bytes:
-        """
-        Load a user's private key PEM from disk.
-
-        Raises FileNotFoundError if the key file does not exist.
-        """
+        
         priv_path = self._private_key_path(username)
         if not priv_path.exists():
             raise FileNotFoundError(
