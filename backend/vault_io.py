@@ -1,31 +1,4 @@
-"""
-vault_io.py
-===========
-Handles reading plaintext files, writing/reading Vault bundles, and
-the full Encrypt / Decrypt orchestration that ties CryptoEngine +
-KeyManager together.
 
-Vault Bundle Format
--------------------
-A ".vault" file is a raw binary file with a simple length-prefixed layout:
-
-  [4 bytes]  magic number  0x5641554C  ("VAUL")
-  [4 bytes]  version       0x00000001
-  [4 bytes]  len(wrapped_key)
-  [N bytes]  wrapped_key   (RSA-OAEP encrypted AES key)
-  [4 bytes]  len(signature)
-  [N bytes]  signature     (RSA-PSS signature over SHA-256 of plaintext)
-  [16 bytes] iv            (AES-CBC initialisation vector, always 16 bytes)
-  [4 bytes]  len(ciphertext)
-  [N bytes]  ciphertext    (AES-256-CBC encrypted file content)
-
-All multi-byte integers are big-endian.
-
-Why a custom binary format instead of JSON/base64?
-  • No encoding overhead for large files (binary is ~33 % smaller than base64)
-  • Deterministic parsing — no ambiguity from JSON libraries
-  • Easy to inspect with a hex editor for coursework demonstration
-"""
 
 import struct
 from pathlib import Path
@@ -84,12 +57,7 @@ class FileIO:
 
     @staticmethod
     def read_vault(vault_path: Path) -> VaultBundle:
-        """
-        Deserialise a .vault file back into a VaultBundle.
-
-        Raises ValueError on magic/version mismatch (wrong file type or
-        corrupted header).
-        """
+       
         with open(vault_path, "rb") as fh:
             data = fh.read()
 
@@ -129,12 +97,7 @@ class FileIO:
 # VaultManager  –  high-level Encrypt / Decrypt orchestration
 # ---------------------------------------------------------------------------
 class VaultManager:
-    """
-    Orchestrates the full Sign-then-Encrypt and Decrypt-then-Verify workflows.
 
-    Dependencies are injected (KeyManager, CryptoEngine, FileIO) to make
-    each layer independently testable.
-    """
 
     def __init__(self, vault_dir: Path = VAULT_DIR):
         self.vault_dir  = vault_dir
@@ -151,28 +114,7 @@ class VaultManager:
         recipient      : str,
         output_name    : str | None = None,
     ) -> Path:
-        """
-        Full Sign-then-Encrypt pipeline.
-
-        Steps
-        -----
-        1. Read the plaintext file from disk.
-        2. Compute SHA-256(plaintext).
-        3. Sign the digest with sender's RSA private key  →  signature.
-        4. Generate a random AES-256 session key.
-        5. Encrypt plaintext with AES-256-CBC (fresh IV)  →  (iv, ciphertext).
-        6. Wrap the AES key with recipient's RSA public key  →  wrapped_key.
-        7. Serialise (wrapped_key, signature, iv, ciphertext) to a .vault file.
-
-        Parameters
-        ----------
-        plaintext_path : Path to the file to encrypt.
-        sender         : Username of the signing party (must have private key).
-        recipient      : Username of the decrypting party (must have public key in DB).
-        output_name    : Optional vault filename stem (default: original filename + '.vault').
-
-        Returns the Path of the created .vault file.
-        """
+       
         plaintext_path = Path(plaintext_path)
         if not plaintext_path.exists():
             raise FileNotFoundError(f"Input file not found: {plaintext_path}")
@@ -227,25 +169,7 @@ class VaultManager:
         sender      : str,
         output_path : str | Path | None = None,
     ) -> Path:
-        """
-        Full Decrypt-then-Verify pipeline.
-
-        Steps
-        -----
-        1. Deserialise the .vault file  →  VaultBundle.
-        2. Unwrap the AES key using recipient's RSA private key.
-        3. Decrypt ciphertext with AES-256-CBC using recovered key + stored IV.
-        4. Compute SHA-256(plaintext).
-        5. Verify signature using sender's RSA public key.
-        6. Write plaintext to output_path.
-
-        Raises
-        ------
-        ValueError  : if signature verification fails (tampering detected).
-        Any exception from OAEP decryption if the wrong private key is used.
-
-        Returns the Path of the decrypted output file.
-        """
+       
         vault_path = Path(vault_path)
         if not vault_path.exists():
             raise FileNotFoundError(f"Vault file not found: {vault_path}")
@@ -297,20 +221,7 @@ class VaultManager:
     # ------------------------------------------------------------------ #
 
     def ecb_demo(self, plaintext_path: str | Path, aes_key: bytes | None = None) -> Path:
-        """
-        Encrypt a file with AES-ECB and save the result for visual comparison.
-
-        If no aes_key is supplied, a random 256-bit key is generated.
-        Returns the path of the ECB-encrypted output file.
-
-        Usage in your report
-        --------------------
-        1. Use a 24-bit BMP bitmap (no compression) as input — the raw pixel
-           data will show pattern leakage visually similar to the classic
-           "ECB Penguin" demonstration.
-        2. Encrypt the same file with CBC using encrypt_file().
-        3. Compare the two outputs in a hex editor or image viewer.
-        """
+      
         plaintext_path = Path(plaintext_path)
         plaintext      = plaintext_path.read_bytes()
 
