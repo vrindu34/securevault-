@@ -363,6 +363,26 @@ select option { background: var(--bg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .fade-in { animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  header { padding: 14px 16px; }
+  .logo-text { font-size: 16px; }
+  .session-badge { display: none; }
+  .app-layout { grid-template-columns: 1fr; }
+  .sidebar { flex-direction: row; overflow-x: auto; padding: 8px; border-right: none; border-bottom: 1px solid var(--border); gap: 2px; }
+  .sidebar-bottom { display: none; }
+  .nav-section { display: flex; flex-direction: row; gap: 2px; padding: 0 4px; margin-bottom: 0; }
+  .nav-label { display: none; }
+  .nav-item { font-size: 11px; padding: 8px 10px; white-space: nowrap; }
+  main { padding: 16px; }
+  .panel-title { font-size: 20px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .login-box { width: 95%; padding: 24px; }
+  .vm-grid { grid-template-columns: 1fr; }
+  .inbox-actions { flex-direction: column; }
+  .inbox-item { flex-wrap: wrap; }
+}
 </style>
 </head>
 <body>
@@ -889,7 +909,6 @@ async function doSend() {
   btn.disabled = true;
   prog.style.display = '';
 
-  // Dim all steps first
   steps.forEach(s => {
     s.style.opacity = '0.3';
     s.style.borderLeft = '';
@@ -1017,7 +1036,6 @@ function closeVaultModal() {
   document.getElementById('vault-modal').classList.remove('open');
 }
 
-// Close modal on backdrop click
 document.getElementById('vault-modal').addEventListener('click', function(e) {
   if (e.target === this) closeVaultModal();
 });
