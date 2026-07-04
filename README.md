@@ -1,5 +1,9 @@
 # SecureVault – Encrypted File Sharing System
 
+**Author:** Vrinda Gupta  
+**Usage Notice:** This repository is shared publicly for portfolio, research, and evaluation purposes only. Reuse, redistribution, modification, or submission of this work as one’s own without explicit permission from the author is not allowed.
+
+## Overview
 SecureVault is a secure file sharing system designed to protect data through encryption and structured key management. The application enables users to upload, store, and retrieve files while ensuring that all sensitive data remains encrypted and accessible only to authorized users.
 
 ## Features
